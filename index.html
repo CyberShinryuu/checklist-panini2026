@@ -11,6 +11,7 @@
             --accent: #d4af37;
             --danger: #dc3545;
             --success: #28a745;
+            --coca-cola: #fe001a;
         }
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -76,6 +77,9 @@
             font-weight: bold;
             color: var(--accent);
             font-size: 0.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .group-container {
@@ -108,15 +112,14 @@
             border-bottom: 1px solid #eee;
         }
 
-        /* Banderas con fondo blanco y borde suave */
         .flag {
             width: 30px;
             height: 20px;
             object-fit: contain;
             border-radius: 2px;
-            background-color: #ffffff; /* Fondo blanco restaurado */
+            background-color: #ffffff;
             padding: 1px;
-            border: 1px solid #ddd; /* Borde gris suave para dar forma */
+            border: 1px solid #ddd;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
@@ -221,7 +224,7 @@
         return `
             <div class="sticker-item" data-reps="0" oncontextmenu="changeRep(event, this, 1)" onmousedown="handleMiddleClick(event, this)">
                 <span class="rep-badge">0</span>
-                <b>${label}</b>
+                <b class="sticker-label">${label}</b>
                 <div class="rep-controls">
                     <button class="btn-rep" onclick="event.stopPropagation(); changeRep(event, this.parentElement.parentElement, -1)">-</button>
                     <button class="btn-rep" onclick="event.stopPropagation(); changeRep(event, this.parentElement.parentElement, 1)">+</button>
@@ -229,10 +232,15 @@
             </div>`;
     }
 
+    // Renderizar Especiales (00, FW y Coca-Cola)
     let specHtml = createStickerHTML("00");
     for(let i=1; i<=19; i++) specHtml += createStickerHTML("FW"+i);
+    // Agregar las 14 de Coca-Cola
+    for(let i=1; i<=14; i++) specHtml += createStickerHTML("C"+i);
+    
     specialRoot.innerHTML += specHtml;
 
+    // Renderizar Grupos
     Object.entries(groups).forEach(([groupName, teams]) => {
         let groupHtml = `<div class="group-card"><h2>${groupName}</h2>`;
         teams.forEach(team => {
@@ -286,50 +294,50 @@
         document.getElementById('total-repetidas').innerText = repsTotal;
         document.getElementById('porcentaje').innerText = perc + "%";
         document.getElementById('progreso-visual').style.width = perc + "%";
+        
+        saveData();
     }
 
-    updateStats();
-
-    // --- AGREGAR ESTO AL FINAL DE TU SCRIPT ---
-
-// Función para guardar en la memoria del dispositivo
-function saveData() {
-    const data = [];
-    document.querySelectorAll('.sticker-item').forEach((item, index) => {
-        data.push({
-            obtained: item.classList.contains('obtained'),
-            reps: item.getAttribute('data-reps')
+    function saveData() {
+        const data = [];
+        document.querySelectorAll('.sticker-item').forEach((item) => {
+            data.push({
+                obtained: item.classList.contains('obtained'),
+                reps: item.getAttribute('data-reps')
+            });
         });
-    });
-    localStorage.setItem('panini2026_progress', JSON.stringify(data));
-}
-
-// Función para cargar los datos al abrir la app
-function loadData() {
-    const saved = localStorage.getItem('panini2026_progress');
-    if (saved) {
-        const data = JSON.parse(saved);
-        document.querySelectorAll('.sticker-item').forEach((item, index) => {
-            if (data[index].obtained) item.classList.add('obtained');
-            const reps = data[index].reps || "0";
-            item.setAttribute('data-reps', reps);
-            const badge = item.querySelector('.rep-badge');
-            badge.innerText = reps;
-            badge.style.display = reps > 0 ? 'block' : 'none';
-        });
-        updateStats();
+        localStorage.setItem('panini2026_progress', JSON.stringify(data));
     }
-}
 
-// Llamar a loadData al iniciar
-window.onload = loadData;
+    function loadData() {
+        const saved = localStorage.getItem('panini2026_progress');
+        if (saved) {
+            const data = JSON.parse(saved);
+            const items = document.querySelectorAll('.sticker-item');
+            data.forEach((val, index) => {
+                if (items[index]) {
+                    if (val.obtained) items[index].classList.add('obtained');
+                    const reps = val.reps || "0";
+                    items[index].setAttribute('data-reps', reps);
+                    const badge = items[index].querySelector('.rep-badge');
+                    badge.innerText = reps;
+                    badge.style.display = reps > 0 ? 'block' : 'none';
+                }
+            });
+            // Re-ejecutar stats sin disparar saveData de nuevo inmediatamente
+            const obtenidos = document.querySelectorAll('.sticker-item.obtained').length;
+            let repsTotal = 0;
+            document.querySelectorAll('.sticker-item').forEach(i => repsTotal += parseInt(i.getAttribute('data-reps')));
+            const perc = ((obtenidos / totalStickersCount) * 100).toFixed(1);
+            document.getElementById('conseguidas').innerText = obtenidos;
+            document.getElementById('restantes').innerText = totalStickersCount - obtenidos;
+            document.getElementById('total-repetidas').innerText = repsTotal;
+            document.getElementById('porcentaje').innerText = perc + "%";
+            document.getElementById('progreso-visual').style.width = perc + "%";
+        }
+    }
 
-// Modificar tu función updateStats para que guarde cada vez que hay un cambio
-const originalUpdateStats = updateStats;
-updateStats = function() {
-    originalUpdateStats();
-    saveData();
-}
+    window.onload = loadData;
 </script>
 
 </body>
