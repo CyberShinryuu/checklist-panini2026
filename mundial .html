@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Checklist Panini 2026</title>
+    <style>
+        :root {
+            --primary: #8a1538;
+            --secondary: #eeeee4;
+            --text: #333;
+            --accent: #d4af37;
+            --danger: #dc3545;
+            --success: #28a745;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        .header-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #f4f4f4;
+            padding: 10px 20px;
+        }
+        .dashboard {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border-top: 5px solid var(--primary);
+            margin-bottom: 10px;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+        }
+        .stat { text-align: center; }
+        .stat span { display: block; font-size: 22px; font-weight: bold; color: var(--primary); }
+        
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            height: 12px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--success);
+            transition: width 0.5s ease;
+        }
+
+        .special-banner {
+            background: #fff9e6;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--accent);
+            display: flex;
+            overflow-x: auto;
+            gap: 8px;
+            white-space: nowrap;
+            margin-bottom: 10px;
+        }
+        .special-title {
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+            font-weight: bold;
+            color: var(--accent);
+            font-size: 0.8em;
+        }
+
+        .group-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 0 20px 20px;
+        }
+        .group-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .group-card h2 {
+            background: var(--primary);
+            color: white;
+            margin: -15px -15px 15px -15px;
+            padding: 10px;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        
+        .country-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Banderas con fondo blanco y borde suave */
+        .flag {
+            width: 30px;
+            height: 20px;
+            object-fit: contain;
+            border-radius: 2px;
+            background-color: #ffffff; /* Fondo blanco restaurado */
+            padding: 1px;
+            border: 1px solid #ddd; /* Borde gris suave para dar forma */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .country-name { 
+            font-weight: bold; 
+            font-size: 0.9em; 
+            color: var(--primary); 
+            text-transform: uppercase;
+        }
+        
+        .sticker-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+        .sticker-item {
+            position: relative;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fff;
+            padding: 5px 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .sticker-item.obtained { background: #d1e7dd; border-color: #a3cfbb; }
+        
+        .rep-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 3px;
+        }
+        .btn-rep {
+            font-size: 9px;
+            padding: 0 4px;
+            border-radius: 3px;
+            border: none;
+            background: #eee;
+            cursor: pointer;
+        }
+        .btn-rep:hover { background: #ddd; }
+
+        .rep-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--danger);
+            color: white;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 10px;
+            display: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-sticky">
+    <div class="dashboard">
+        <div class="stats-row">
+            <div class="stat"><label>Faltantes</label><span id="restantes">0</span></div>
+            <div class="stat"><label>Progreso</label><span id="porcentaje">0%</span></div>
+            <div class="stat"><label>Conseguidas</label><span id="conseguidas">0</span></div>
+            <div class="stat"><label>Repetidas</label><span id="total-repetidas" style="color:var(--danger)">0</span></div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progreso-visual"></div>
+        </div>
+    </div>
+
+    <div class="special-banner" id="special-root">
+        <div class="special-title">ESPECIALES</div>
+    </div>
+</div>
+
+<div class="group-container" id="groups-root"></div>
+
+<script>
+    const groups = {
+        "Grupo A": [{ n: "México", c: "mx" }, { n: "Sudáfrica", c: "za" }, { n: "República de Corea", c: "kr" }, { n: "República Checa", c: "cz" }],
+        "Grupo B": [{ n: "Canadá", c: "ca" }, { n: "Bosnia y Herzegovina", c: "ba" }, { n: "Catar", c: "qa" }, { n: "Suiza", c: "ch" }],
+        "Grupo C": [{ n: "Brasil", c: "br" }, { n: "Marruecos", c: "ma" }, { n: "Haití", c: "ht" }, { n: "Escocia", c: "gb-sct" }],
+        "Grupo D": [{ n: "Estados Unidos", c: "us" }, { n: "Paraguay", c: "py" }, { n: "Australia", c: "au" }, { n: "Turquía", c: "tr" }],
+        "Grupo E": [{ n: "Alemania", c: "de" }, { n: "Curazao", c: "cw" }, { n: "Costa de Marfil", c: "ci" }, { n: "Ecuador", c: "ec" }],
+        "Grupo F": [{ n: "Países Bajos", c: "nl" }, { n: "Japón", c: "jp" }, { n: "Suecia", c: "se" }, { n: "Túnez", c: "tn" }],
+        "Grupo G": [{ n: "Bélgica", c: "be" }, { n: "Egipto", c: "eg" }, { n: "RI de Irán", c: "ir" }, { n: "Nueva Zelanda", c: "nz" }],
+        "Grupo H": [{ n: "España", c: "es" }, { n: "Cabo Verde", c: "cv" }, { n: "Arabia Saudí", c: "sa" }, { n: "Uruguay", c: "uy" }],
+        "Grupo I": [{ n: "Francia", c: "fr" }, { n: "Senegal", c: "sn" }, { n: "Irak", c: "iq" }, { n: "Noruega", c: "no" }],
+        "Grupo J": [{ n: "Argentina", c: "ar" }, { n: "Argelia", c: "dz" }, { n: "Austria", c: "at" }, { n: "Jordania", c: "jo" }],
+        "Grupo K": [{ n: "Portugal", c: "pt" }, { n: "RD del Congo", c: "cd" }, { n: "Uzbekistán", c: "uz" }, { n: "Colombia", c: "co" }],
+        "Grupo L": [{ n: "Inglaterra", c: "gb-eng" }, { n: "Croacia", c: "hr" }, { n: "Ghana", c: "gh" }, { n: "Panamá", c: "pa" }]
+    };
+
+    const root = document.getElementById('groups-root');
+    const specialRoot = document.getElementById('special-root');
+
+    function createStickerHTML(label) {
+        return `
+            <div class="sticker-item" data-reps="0" oncontextmenu="changeRep(event, this, 1)" onmousedown="handleMiddleClick(event, this)">
+                <span class="rep-badge">0</span>
+                <b>${label}</b>
+                <div class="rep-controls">
+                    <button class="btn-rep" onclick="event.stopPropagation(); changeRep(event, this.parentElement.parentElement, -1)">-</button>
+                    <button class="btn-rep" onclick="event.stopPropagation(); changeRep(event, this.parentElement.parentElement, 1)">+</button>
+                </div>
+            </div>`;
+    }
+
+    let specHtml = createStickerHTML("00");
+    for(let i=1; i<=19; i++) specHtml += createStickerHTML("FW"+i);
+    specialRoot.innerHTML += specHtml;
+
+    Object.entries(groups).forEach(([groupName, teams]) => {
+        let groupHtml = `<div class="group-card"><h2>${groupName}</h2>`;
+        teams.forEach(team => {
+            groupHtml += `
+                <div class="country-header">
+                    <img class="flag" src="https://flagcdn.com/w40/${team.c}.png" alt="${team.n}">
+                    <div class="country-name">${team.n}</div>
+                </div>
+                <div class="sticker-grid">`;
+            for(let i=1; i<=20; i++) groupHtml += createStickerHTML(i);
+            groupHtml += `</div>`;
+        });
+        groupHtml += `</div>`;
+        root.innerHTML += groupHtml;
+    });
+
+    const totalStickersCount = document.querySelectorAll('.sticker-item').length;
+
+    document.addEventListener('click', function(e) {
+        const item = e.target.closest('.sticker-item');
+        if(item && !e.target.classList.contains('btn-rep')) {
+            item.classList.toggle('obtained');
+            updateStats();
+        }
+    });
+
+    function changeRep(e, element, val) {
+        if(e) e.preventDefault();
+        let reps = parseInt(element.getAttribute('data-reps'));
+        reps = Math.max(0, reps + val);
+        element.setAttribute('data-reps', reps);
+        const badge = element.querySelector('.rep-badge');
+        badge.innerText = reps;
+        badge.style.display = reps > 0 ? 'block' : 'none';
+        updateStats();
+    }
+
+    function handleMiddleClick(e, element) {
+        if(e.button === 1) { e.preventDefault(); changeRep(null, element, -1); }
+    }
+
+    function updateStats() {
+        const obtenidos = document.querySelectorAll('.sticker-item.obtained').length;
+        let repsTotal = 0;
+        document.querySelectorAll('.sticker-item').forEach(i => repsTotal += parseInt(i.getAttribute('data-reps')));
+        
+        const perc = ((obtenidos / totalStickersCount) * 100).toFixed(1);
+
+        document.getElementById('conseguidas').innerText = obtenidos;
+        document.getElementById('restantes').innerText = totalStickersCount - obtenidos;
+        document.getElementById('total-repetidas').innerText = repsTotal;
+        document.getElementById('porcentaje').innerText = perc + "%";
+        document.getElementById('progreso-visual').style.width = perc + "%";
+    }
+
+    updateStats();
+
+    // --- AGREGAR ESTO AL FINAL DE TU SCRIPT ---
+
+// Función para guardar en la memoria del dispositivo
+function saveData() {
+    const data = [];
+    document.querySelectorAll('.sticker-item').forEach((item, index) => {
+        data.push({
+            obtained: item.classList.contains('obtained'),
+            reps: item.getAttribute('data-reps')
+        });
+    });
+    localStorage.setItem('panini2026_progress', JSON.stringify(data));
+}
+
+// Función para cargar los datos al abrir la app
+function loadData() {
+    const saved = localStorage.getItem('panini2026_progress');
+    if (saved) {
+        const data = JSON.parse(saved);
+        document.querySelectorAll('.sticker-item').forEach((item, index) => {
+            if (data[index].obtained) item.classList.add('obtained');
+            const reps = data[index].reps || "0";
+            item.setAttribute('data-reps', reps);
+            const badge = item.querySelector('.rep-badge');
+            badge.innerText = reps;
+            badge.style.display = reps > 0 ? 'block' : 'none';
+        });
+        updateStats();
+    }
+}
+
+// Llamar a loadData al iniciar
+window.onload = loadData;
+
+// Modificar tu función updateStats para que guarde cada vez que hay un cambio
+const originalUpdateStats = updateStats;
+updateStats = function() {
+    originalUpdateStats();
+    saveData();
+}
+</script>
+
+</body>
+</html>
